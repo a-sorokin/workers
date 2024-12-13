@@ -1,29 +1,24 @@
-type TCalcFunc = (...args: unknown[]) => unknown;
-type TPostMessage = (...args: unknown[]) => void;
-type TOnMessage = (e: MessageEvent<unknown>) => void;
-type TCalculate = (...args: unknown[]) => Promise<unknown>;
-
-const createWorkerObject = (calcFunc: TCalcFunc): Worker => {
+const createWorkerObject = <T>(calcFunc: T): Worker => {
   const onMessageStr = `onmessage = (event) => postMessage(${calcFunc}(...event.data.args))`;
   const workerBlob = new Blob([onMessageStr], { type: 'application/javascript' });
   return new Worker(URL.createObjectURL(workerBlob));
 };
 
-export const createWorker = (calcFunc: TCalcFunc) => {
+export const createWorker = <T>(calcFunc: T) => {
   const worker = createWorkerObject(calcFunc);
 
-  const setOnMessage = (onMessage: TOnMessage) => {
+  const setOnMessage = (onMessage: (e: MessageEvent<unknown>) => void) => {
     worker.onmessage = (e) => onMessage(e.data);
   };
 
-  const postMessage: TPostMessage = function () {
-    worker.postMessage({ args: [...arguments] });
+  const postMessage = function (...args: unknown[]) {
+    worker.postMessage({ args });
   };
 
-  const calculate: TCalculate = function () {
+  const calculate = function (...args: unknown[]) {
     return new Promise((resolve) => {
       worker.onmessage = (e) => resolve(e.data);
-      worker.postMessage({ args: [...arguments] });
+      worker.postMessage({ args });
     });
   };
 
